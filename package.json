@@ -1,7 +1,7 @@
 {
   "name": "xyz_backend",
   "version": "1.0.0",
-  "description": "Backend API for TZA App",
+  "description": "Some good description",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,9 +12,9 @@
   "author": "Joe Doe",
   "license": "ISC",
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.14.11",
+    "@types/cors": "*",
+    "@types/express": "*",
+    "@types/node": "*",
     "concurrently": "*",
     "nodemon": "*",
     "typescript": "*"
