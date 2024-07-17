@@ -9,7 +9,7 @@
     "build": "tsc",
     "dev": "NODE_ENV=development concurrently \"npx tsc --watch\" \"npx nodemon -q build/app.js\""
   },
-  "author": "Vladislav Fetisov",
+  "author": "Joe Doe",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "*",
