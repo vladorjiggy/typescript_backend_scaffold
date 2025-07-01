@@ -1,17 +1,30 @@
 import { createLogger, transports, format } from "winston";
 import Transport from "winston-transport";
 import { Logger } from "winston";
+import path from "path";
+import fs from "fs";
 
 export class Logging {
     private logger: Logger;
-    constructor(serviceName: string, transporter: string, type: string) {
+    private serviceName: string;
+
+    constructor(serviceName: string) {
+        this.serviceName = serviceName;
+        
+        // Always create the file transport
+        const transporters = [this.createFileTransport()];
+        
+        // Add console transport in development mode
+        if (process.env.NODE_ENV === "development") {
+            transporters.push(this.createConsoleTransport());
+        }
+        
         this.logger = createLogger({
-            transports: [this.setTransporter(transporter, type)],
+            transports: transporters,
             format: format.combine(
-                format.colorize(),
                 format.timestamp({ format: this.timezonedFormatedTimestamp }),
-                format.printf(({ timestamp, level, message, service }) => {
-                    return `[${timestamp}] ${service} ${level}: ${message}`;
+                format.printf(({ timestamp, level, message }) => {
+                    return `[${timestamp}] ${this.serviceName} ${level}: ${message}`;
                 })
             ),
             defaultMeta: {
@@ -20,74 +33,92 @@ export class Logging {
         });
     }
 
-    public info(message: string, ...args: any[]) {
-        this.logger.info(message);
+    public error(message: string | Error, ...args: any[]) {
+
+        // If message is an Error object, log its stack trace
+        if (message instanceof Error) {
+            this.logger.error(message.stack || message.message);
+            return;
+        }
+
+        // Handle the case where message is a string and args exist
         if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.info(arg);
+            const errorArgs = args.map(arg => {
+                if (arg instanceof Error) {
+                    return arg.stack || arg.message;
+                }
+                return arg;
             });
+
+            this.logger.error(`${message}${errorArgs.join(' ')}`);
+        } else {
+            this.logger.error(message);
         }
     }
 
-    public error(message: string, ...args: any[]) {
-        this.logger.error(message);
-        if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.error(arg);
-            });
+    public info(message: string | Error, ...args: any[]) {
+        // If message is an Error object, log its stack trace
+        if (message instanceof Error) {
+            this.logger.error(message.stack || message.message);
+            return;
         }
-    }
 
-    public warn(message: string, ...args: any[]) {
-        this.logger.warn(message);
+        // Handle the case where message is a string and args exist
         if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.warn(arg);
+            const errorArgs = args.map(arg => {
+                if (arg instanceof Error) {
+                    return arg.stack || arg.message;
+                }
+                return arg;
             });
-        }
-    }
 
-    public debug(message: string, ...args: any[]) {
-        this.logger.debug(message);
-        if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.debug(arg);
-            });
-        }
-    }
-
-    public verbose(message: string, ...args: any[]) {
-        this.logger.verbose(message);
-        if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.verbose(arg);
-            });
-        }
-    }
-
-    public silly(message: string, ...args: any[]) {
-        this.logger.silly(message);
-        if (args.length > 0) {
-            args.forEach(arg => {
-                this.logger.silly(arg);
-            });
+            this.logger.info(`${message}${errorArgs.join(' ')}`);
+        } else {
+            this.logger.info(message);
         }
     }
 
     private timezonedFormatedTimestamp() {
-        return new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+        return new Date().toLocaleString("de-DE", {
+            timeZone: "Europe/Berlin",
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     }
 
-    private setTransporter(transporter: string, type: string) {
+    private createFileTransport(): Transport {
         const today = this.setToday();
-        let t: Transport;
-        if (transporter == "file") {
-            t = new transports.File({ filename: `../logs/${type}-${today}.log` });
+        const logDir = path.resolve(__dirname, '../logs');
+        if (!fs.existsSync(logDir)) {
+            fs.mkdirSync(logDir, { recursive: true });
         }
-        else {
-            t = new transports.Console();
-        }
-        return t;
+        const logFilePath = path.join(logDir, `${today}.log`);
+        
+        return new transports.File({
+            filename: logFilePath,
+            format: format.combine(
+                format.timestamp({ format: this.timezonedFormatedTimestamp }),
+                format.printf(({ timestamp, level, message }) => {
+                    return `[${timestamp}] ${this.serviceName} ${level}: ${message}`;
+                })
+            )
+        });
+    }
+
+    private createConsoleTransport(): Transport {
+        return new transports.Console({
+            format: format.combine(
+                format.colorize(),
+                format.timestamp({ format: this.timezonedFormatedTimestamp }),
+                format.printf(({ timestamp, level, message }) => {
+                    return `[${timestamp}] ${this.serviceName} ${level}: ${message}`;
+                })
+            )
+        });
     }
 
     private setToday() {
@@ -95,6 +126,6 @@ export class Logging {
         const dd = String(today.getDate()).padStart(2, '0');
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const yyyy = today.getFullYear();
-        return `${dd}-${mm}-${yyyy}`;
+        return `${dd}-${mm}-${yyyy}`; //
     }
 }

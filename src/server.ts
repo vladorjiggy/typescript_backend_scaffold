@@ -9,7 +9,7 @@ app.set('trust proxy', 1); // IF YOU ARE BEHIND A PROXY
 
 const port = process.env.PORT || 3000;
 import { Logging } from './utils/logger';
-const logger = new Logging('server', 'console', 'server');
+const logger = new Logging('server');
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
